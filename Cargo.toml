@@ -1,0 +1,13 @@
+[package]
+name = "dillos_rust"
+version = "0.1.0"
+authors = ["phish3y <logsdonevan1@gmail.com>"]
+edition = "2018"
+
+
+[dependencies]
+
+[dependencies.sdl2]
+version = "0.34.2"
+default-features = false
+features = ["image"]

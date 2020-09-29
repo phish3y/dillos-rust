@@ -8,12 +8,27 @@ use sdl2::rect::{Point, Rect};
 
 use std::time::Duration;
 
+struct Dillo {
+  position: Rect
+}
+
+impl Dillo {
+  fn new(x: i32, y: i32) -> Dillo {
+    Dillo {
+      position: Rect::from((x, y, 63, 85))
+    }
+  }
+}
+
 fn render(canvas: &mut WindowCanvas, color: Color, background: &Texture, dillo: &Texture) -> Result<(), String> {
     canvas.set_draw_color(color);
     canvas.clear();
 
+    let dillo1 = Dillo::new(0, 0);
+    // let (width, height) = canvas.output_size()?;
+    // let screen_rect = Rect::from_center(Point::new(width as i32 / 2, height as i32 / 2), 63, 85);
     canvas.copy(background, None, None)?;
-    canvas.copy(dillo, None, Rect::new(0, 0, 63, 85))?;
+    canvas.copy(dillo, None, dillo1.position)?;
 
     canvas.present();
 

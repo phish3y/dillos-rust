@@ -1,10 +1,10 @@
-use sdl2::pixels::Color;
+use sdl2::EventPump;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::video::{Window, WindowContext};
-use sdl2::render::{Canvas, WindowCanvas, TextureCreator, Texture};
+use sdl2::render::{Canvas, TextureCreator};
 use sdl2::image::{self, LoadTexture, InitFlag};
-use sdl2::rect::{Point, Rect};
+use sdl2::rect::Rect;
 
 use std::time::Duration;
 
@@ -18,21 +18,11 @@ impl Dillo {
       position: Rect::from((x, y, 63, 85))
     }
   }
-}
 
-fn render(canvas: &mut WindowCanvas, color: Color, background: &Texture, dillo: &Texture) -> Result<(), String> {
-    canvas.set_draw_color(color);
-    canvas.clear();
-
-    let dillo1 = Dillo::new(0, 0);
-    // let (width, height) = canvas.output_size()?;
-    // let screen_rect = Rect::from_center(Point::new(width as i32 / 2, height as i32 / 2), 63, 85);
-    canvas.copy(background, None, None)?;
-    canvas.copy(dillo, None, dillo1.position)?;
-
-    canvas.present();
-
-    Ok(())
+  fn update_position(& mut self, x: i32, y: i32) {
+      self.position.set_x(self.position.x + x);
+      self.position.set_y(self.position.y + y);
+  }
 }
 
 fn main() -> Result<(), String> {
@@ -50,11 +40,15 @@ fn main() -> Result<(), String> {
         .expect("could not make a canvas");
 
     let texture_creator: TextureCreator<WindowContext> = canvas.texture_creator();
-    let background = texture_creator.load_texture("assets/packs/pack1/level1/lv1_1.png")?;
-    let dillo = texture_creator.load_texture("assets/dillo/dwf/dwf1.png")?;
+    let dillo_texture = texture_creator.load_texture("assets/dillo/dwf/dwf1.png")?;
+    let mut dillo1 = Dillo::new(0, 0);
 
-    let mut event_pump = sdl_context.event_pump()?;
-    let mut i = 0;
+    // TODO
+    // let g1 = Rect::from((x, y, width, height): (i32, i32, u32, u32))
+
+    let mut event_pump: EventPump = sdl_context.event_pump()?;
+
+    let mut start_game: bool = false;
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -62,13 +56,23 @@ fn main() -> Result<(), String> {
                 Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'running;
                 },
+                Event::MouseButtonDown {..} |
+                Event::FingerDown {..} => { 
+                    start_game = true;
+                }
                 _ => {}
             }
         }
 
-        i = (i + 1) % 255;
+        canvas.clear();
 
-        render(&mut canvas, Color::RGB(i, 64, 255-i), &background, &dillo)?;
+        if start_game {
+            dillo1.update_position(0, 5);
+        }
+
+        canvas.copy(&dillo_texture, None, dillo1.position)?;
+
+        canvas.present();
 
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }

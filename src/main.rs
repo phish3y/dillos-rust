@@ -12,7 +12,8 @@ use std::time::Duration;
 struct Dillo {
   position: Rect,
   x_speed: i32,
-  y_speed: i32
+  y_speed: i32,
+  collision_rect: Option<Rect>
 }
 
 impl Dillo {
@@ -21,6 +22,7 @@ impl Dillo {
       position: Rect::from((x, y, 63, 85)),
       x_speed: 0,
       y_speed: 0,
+      collision_rect: None
     }
   }
 
@@ -30,17 +32,52 @@ impl Dillo {
   }
 }
 
-struct Ground {
-    rect: Rect,
-    intersect: Option<Rect>
+trait Collider {
+    fn new(x: i32, y: i32, width: u32, heigh: u32) -> Self;
+    fn get_rect(&self) -> Rect;
 }
 
-impl Ground {
+struct Ground {
+    rect: Rect
+}
+
+impl Collider for Ground {
     fn new(x: i32, y: i32, width: u32, height: u32) -> Ground {
         Ground {
-            rect: Rect::new(x, y, width, height),
-            intersect: None
+            rect: Rect::new(x, y, width, height)      
         }
+    }
+
+    fn get_rect(&self) -> Rect {
+        return self.rect
+    }
+}
+
+fn collide<T: Collider>(colliding_objects: &Vec<&T>, dillo: &mut Dillo) {
+    let mut colliding_objects_count = 0;
+    for colliding_object in colliding_objects {
+        let collision: Option<Rect> = colliding_object.get_rect().intersection(dillo.position);
+        if let Some(current_collision) = collision {
+            if let Some(previous_collision) = dillo.collision_rect {
+                // there's a previous intersect, see if the height or width has changed
+                // if height changed, set y_speed to 0, if width changed, reverse direction
+                if current_collision.height() != previous_collision.height() {
+                    // we must be colliding on the y axis
+                    dillo.y_speed = 0;
+                    break
+                }
+
+            } else {
+                // no previous intersect, just updated the intersect on the ground object
+                dillo.collision_rect = Some(current_collision);
+            }
+        }
+        colliding_objects_count += 1;
+    }
+
+    if colliding_objects_count == colliding_objects.len() {
+        // nothing collided
+        dillo.y_speed = 5;
     }
 }
 
@@ -63,7 +100,10 @@ fn main() -> Result<(), String> {
     let mut dillo1 = Dillo::new(0, 0);
 
     // x, y, width, height
-    let mut g1 = Ground::new(0, 700, 650, 200);
+    let g1 = Ground::new(0, 700, 650, 200);
+    let g2 = Ground::new(250, 800, 650, 200);
+
+    let colliders = vec!(&g1, &g2);
 
     let mut event_pump: EventPump = sdl_context.event_pump()?;
 
@@ -84,7 +124,6 @@ fn main() -> Result<(), String> {
             }
         }
 
-
         if start_game {
             if !start_speed_set {
                 dillo1.y_speed = 5;
@@ -94,38 +133,17 @@ fn main() -> Result<(), String> {
 
             dillo1.update_position(); 
 
-            let intersection: Option<Rect> = g1.rect.intersection(dillo1.position);
-            if let Some(current_intersect) = intersection {
-                if let Some(previous_intersect) = g1.intersect {
-                    // there's a previous intersect, see if the y or x has changed
-                    // if height changed, set y_speed to 0, if width changed, reverse direction
-                    if current_intersect.height() != previous_intersect.height() {
-                        // we must be colliding on the y axis
-                        dillo1.y_speed = 0
-                    }
-    
-                } else {
-                    // no previous intersect, just updated the intersect on the ground object
-                    g1.intersect = intersection;
-                }
-                
-    
-            } else {
-                // not intersecting anything, so fall
-                dillo1.y_speed = 5;
-            }
+            collide(&colliders, &mut dillo1);
         }
-        
-       
 
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
 
         canvas.set_draw_color(Color::RGB(255, 0, 0));
         canvas.draw_rect(g1.rect)?;
+        canvas.draw_rect(g2.rect)?;
 
         canvas.copy(&dillo_texture, None, dillo1.position)?;
-
 
         canvas.present();
 
